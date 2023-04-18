@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package splitwiser;
+
+import "google/protobuf/empty.proto";
+
+service Splitwiser {
+  rpc SayHello (google.protobuf.Empty) returns (HelloResponse) {}
+}
+
+message HelloResponse {
+  string message = 1;
+}
