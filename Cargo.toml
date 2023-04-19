@@ -8,5 +8,7 @@ tonic = { version = "0.8.0", features = ["codegen", "transport", "prost"], defau
 prost = { version = "0.11.0", default-features = false }
 tokio = { version = "1.13.0", features = ["rt-multi-thread"], default-features = false  }
 
+db = { path = "db" }
+
 [build-dependencies]
 tonic-build = { version = "0.8.0", features = ["prost"], default-features = false }
