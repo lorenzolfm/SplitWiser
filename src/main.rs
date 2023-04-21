@@ -1,10 +1,6 @@
 mod env;
 mod grpc;
 
-pub mod proto {
-    tonic::include_proto!("splitwiser");
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let env = env::Env::load();
