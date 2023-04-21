@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, ops::Deref, str::FromStr, sync::Arc};
+use std::{collections::HashMap, fmt::Debug, net::SocketAddr, ops::Deref, str::FromStr, sync::Arc};
 
 #[derive(Clone)]
 pub struct Env(Arc<EnvVars>);
@@ -29,6 +29,7 @@ impl Deref for Env {
 pub struct EnvVars {
     pub database_url: String,
     pub env: String,
+    pub socket: SocketAddr,
 }
 
 impl EnvVars {
@@ -36,6 +37,7 @@ impl EnvVars {
         let vars = Self {
             database_url: read(&mut map, "DATABASE_URL"),
             env: read(&mut map, "ENV"),
+            socket: read(&mut map, "SOCKET"),
         };
 
         if let Some(m) = map.filter(|m| !m.is_empty()) {

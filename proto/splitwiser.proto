@@ -5,9 +5,9 @@ package splitwiser;
 import "google/protobuf/empty.proto";
 
 service Splitwiser {
-  rpc SayHello (google.protobuf.Empty) returns (HelloResponse) {}
+  rpc CreateUser (google.protobuf.Empty) returns (Id);
 }
 
-message HelloResponse {
-  string message = 1;
+message Id {
+    int32 id = 1;
 }
