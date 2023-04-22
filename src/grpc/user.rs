@@ -11,5 +11,5 @@ pub(super) async fn create(db: &db::Db) -> Result<proto::Id, Status> {
         .await
         .map_err(|_| Status::internal("db error"))?;
 
-    Ok(proto::Id { id })
+    Ok(proto::Id { id: *id })
 }
