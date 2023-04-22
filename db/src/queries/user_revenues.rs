@@ -2,18 +2,20 @@ use diesel::{ExpressionMethods, PgConnection, QueryResult, RunQueryDsl};
 use schema::schema::user_revenues;
 use time::OffsetDateTime;
 
-pub struct CreateParams {
-    pub user_id: i32,
+use crate::types::{UserId, UserRevenueId};
+
+pub struct CreateParams<'a> {
+    pub user_id: UserId,
     pub amount: i64,
-    pub description: String, // TODO: Use &'a str
+    pub description: &'a str,
     pub incoming_at: OffsetDateTime,
     pub created_at: OffsetDateTime,
 }
 
-pub fn create(conn: &mut PgConnection, p: CreateParams) -> QueryResult<i32> {
+pub fn create(conn: &mut PgConnection, p: CreateParams) -> QueryResult<UserRevenueId> {
     diesel::insert_into(user_revenues::table)
         .values((
-            user_revenues::user_id.eq(p.user_id),
+            user_revenues::user_id.eq(*p.user_id),
             user_revenues::amount.eq(p.amount),
             user_revenues::incoming_at.eq(p.incoming_at),
             user_revenues::description.eq(p.description),
