@@ -133,6 +133,7 @@ name = "db"
 version = "0.1.0"
 dependencies = [
  "diesel",
+ "once_cell",
  "r2d2",
  "schema",
  "time",

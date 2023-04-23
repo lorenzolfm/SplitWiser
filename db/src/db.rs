@@ -36,6 +36,7 @@ impl Db {
     }
 }
 
+#[cfg(not(feature = "test"))]
 fn write<R, E, F>(conn: &mut PgConnection, f: F) -> Result<R, E>
 where
     R: 'static + Send,
@@ -45,4 +46,14 @@ where
     let builder = conn.build_transaction();
     let mut transaction = builder.repeatable_read().read_write();
     transaction.run(f)
+}
+
+#[cfg(feature = "test")]
+fn write<R, E, F>(conn: &mut PgConnection, f: F) -> Result<R, E>
+where
+    R: 'static + Send,
+    E: 'static + Send + From<diesel::result::Error>,
+    F: 'static + Send + FnOnce(&mut PgConnection) -> Result<R, E>,
+{
+    diesel::Connection::transaction(conn, f)
 }

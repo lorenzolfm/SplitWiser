@@ -5,21 +5,17 @@ use db::{
 use time::OffsetDateTime;
 use tonic::Status;
 
-use crate::features::user::{CreateExpenseError, CreateExpenseOutcome};
+use crate::features::user::{self, CreateExpenseError, CreateExpenseOutcome};
 
 use super::proto::{
     create_expense_request, CreateExpenseRequest, CreatePaymentRequest, CreateRevenueRequest, Id,
 };
 
 pub(super) async fn create(db: &db::Db) -> Result<Id, Status> {
-    let id = db
-        .write::<_, db::Error, _>(move |conn| {
-            db::queries::users::create(conn, OffsetDateTime::now_utc())
-        })
-        .await
-        .map_err(|_| Status::internal("db error"))?;
-
-    Ok(Id { id: *id })
+    match user::create(db).await {
+        Ok(id) => Ok(Id { id: *id }),
+        Err(_) => Err(Status::internal("Database error")),
+    }
 }
 
 pub(super) async fn create_revenue(
@@ -85,7 +81,7 @@ pub(super) async fn create_expense(
 
     match crate::features::user::create_expense(
         db,
-        crate::features::user::CreateParams {
+        crate::features::user::CreateExpenseParams {
             total_amount: request.amount as i64,
             begin_charging_at: request.begin_charging_at,
             created_by: request.created_by,
