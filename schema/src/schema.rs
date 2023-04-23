@@ -39,6 +39,7 @@ diesel::table! {
         payee_user_id -> Int4,
         payer_user_id -> Int4,
         payed_at -> Timestamptz,
+        created_at -> Timestamptz,
     }
 }
 

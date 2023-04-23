@@ -17,7 +17,9 @@ CREATE TABLE user_payments (
 
     payee_user_id INT NOT NULL REFERENCES users(id),
     payer_user_id INT NOT NULL REFERENCES users(id),
-    payed_at TIMESTAMPTZ NOT NULL
+    payed_at TIMESTAMPTZ NOT NULL,
+
+    created_at TIMESTAMPTZ NOT NULL
 );
 
 CREATE TYPE user_expenses_charge_method as ENUM (
