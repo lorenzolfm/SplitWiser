@@ -6,7 +6,7 @@ use crate::types::UserExpenseId;
 
 pub struct CreateParams<'a> {
     pub created_by: i32,
-    pub amount: i64,
+    pub total_amount: i64,
     pub description: Option<&'a str>,
     pub chargee_user_id: i32,
     pub charged_user_id: i32,
@@ -18,7 +18,7 @@ pub fn create(conn: &mut PgConnection, p: &CreateParams) -> QueryResult<UserExpe
     diesel::insert_into(user_expenses::table)
         .values((
             user_expenses::created_by.eq(p.created_by),
-            user_expenses::amount.eq(p.amount),
+            user_expenses::amount.eq(p.total_amount),
             user_expenses::description.eq(p.description),
             user_expenses::chargee_user_id.eq(p.chargee_user_id),
             user_expenses::charged_user_id.eq(p.charged_user_id),

@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+
+thiserror = { version = "1.0.0", default-features = false }
 tonic = { version = "0.8.0", features = ["codegen", "transport", "prost"], default-features = false }
 prost = { version = "0.11.0", default-features = false }
 tokio = { version = "1.13.0", features = ["rt-multi-thread"], default-features = false  }
