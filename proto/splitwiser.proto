@@ -6,8 +6,43 @@ import "google/protobuf/empty.proto";
 
 service Splitwiser {
   rpc CreateUser (google.protobuf.Empty) returns (Id);
+  rpc CreateRevenue (CreateRevenueRequest) returns (Id);
+  rpc CreatePayment (CreatePaymentRequest) returns (Id);
+  rpc CreateExpense (CreateExpenseRequest) returns (Id);
 }
 
 message Id {
     int32 id = 1;
+}
+
+message CreateRevenueRequest {
+    int32 user_id = 1;
+    uint64 amount = 2;
+    int64 incoming_at = 3;
+    string description = 4;
+}
+
+message CreatePaymentRequest {
+    int32 created_by = 1;
+    uint64 amount = 2;
+    int32 payee_user_id = 3;
+    int32 payer_user_id = 4;
+    int64 payed_at = 5;
+}
+
+message CreateExpenseRequest {
+    int32 created_by = 1;
+    uint64 amount = 2;
+    optional string description = 3;
+    int32 chargee_user_id = 4;
+    int32 charged_user_id = 5;
+    int64 begin_charging_at = 6;
+    uint32 installments = 7;
+    Method method = 8;
+
+    enum Method {
+        Even = 0;
+        Proportional = 1;
+        Full = 2;
+    }
 }
