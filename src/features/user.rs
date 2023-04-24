@@ -37,7 +37,6 @@ pub async fn create_revenue(
         incoming_at,
     }: CreateRevenueParams,
 ) -> Result<UserRevenueId, UserError> {
-    let created_at = OffsetDateTime::now_utc();
     let incoming_at =
         OffsetDateTime::from_unix_timestamp(incoming_at).map_err(UserError::TimeError)?;
 
@@ -50,7 +49,7 @@ pub async fn create_revenue(
                     amount,
                     description: description.as_deref(),
                     incoming_at,
-                    created_at,
+                    created_at: OffsetDateTime::now_utc(),
                 },
             )
         })
@@ -171,33 +170,37 @@ pub async fn create_expense(
 mod tests {
     use super::*;
 
-    mod create_expense {
-        use db::enums::UserExpensesChargeMethod;
+    mod create_revenue {
+        use db::types::UserRevenueId;
 
-        #[tokio::test]
-        async fn test() {
+        use crate::features::user::UserError;
+
+        async fn setup_with_amount(amount: i64) -> Result<UserRevenueId, UserError> {
             let db = db::test::db();
+            let user_id = *super::create(&db).await.unwrap();
 
-            let u1 = super::create(&db).await.unwrap();
-            let u2 = super::create(&db).await.unwrap();
-
-            super::create_expense(
+            super::create_revenue(
                 &db,
-                super::CreateExpenseParams {
-                    total_amount: 100,
-                    begin_charging_at: 0,
-                    created_by: *u1,
-                    charged_user_id: *u1,
-                    chargee_user_id: *u2,
-                    charge_method: UserExpensesChargeMethod::Even,
-                    description: Some("asdf".to_string()),
-                    installments: 1,
+                super::CreateRevenueParams {
+                    user_id,
+                    amount,
+                    description: Some("stuff".to_string()),
+                    incoming_at: 1682333141,
                 },
             )
             .await
-            .unwrap();
+        }
 
-            assert_eq!(2, 2);
+        #[tokio::test]
+        async fn amount_should_be_greater_than_zero() {
+            let res = setup_with_amount(-1).await;
+            assert!(matches!(res.err(), Some(super::UserError::DbError(_))));
+
+            let res = setup_with_amount(0).await;
+            assert!(matches!(res.err(), Some(super::UserError::DbError(_))));
+
+            let res = setup_with_amount(1).await;
+            assert!(res.is_ok());
         }
     }
 }

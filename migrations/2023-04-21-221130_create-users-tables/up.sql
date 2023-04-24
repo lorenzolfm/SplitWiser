@@ -2,7 +2,7 @@ CREATE TABLE user_revenues (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id),
 
-    amount BIGINT NOT NULL,
+    amount BIGINT NOT NULL CHECK (amount > 0),
     incoming_at TIMESTAMPTZ NOT NULL,
     description TEXT,
 
