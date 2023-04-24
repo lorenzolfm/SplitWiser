@@ -38,7 +38,9 @@ CREATE TABLE user_expenses (
     chargee_user_id INT NOT NULL REFERENCES users(id),
     charged_user_id INT NOT NULL REFERENCES users(id),
     charge_method user_expenses_charge_method NOT NULL,
-    begin_charging_at TIMESTAMPTZ NOT NULL
+    begin_charging_at TIMESTAMPTZ NOT NULL,
+
+    created_at TIMESTAMPTZ NOT NULL
 ); 
 
 CREATE TABLE user_expense_installments (

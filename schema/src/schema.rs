@@ -28,6 +28,7 @@ diesel::table! {
         charged_user_id -> Int4,
         charge_method -> UserExpensesChargeMethod,
         begin_charging_at -> Timestamptz,
+        created_at -> Timestamptz,
     }
 }
 

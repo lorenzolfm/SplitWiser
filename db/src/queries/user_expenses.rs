@@ -12,6 +12,7 @@ pub struct CreateParams<'a> {
     pub charged_user_id: i32,
     pub begin_charging_at: OffsetDateTime,
     pub charge_method: UserExpensesChargeMethod,
+    pub created_at: OffsetDateTime,
 }
 
 pub fn create(conn: &mut PgConnection, p: &CreateParams) -> QueryResult<UserExpenseId> {
@@ -24,6 +25,7 @@ pub fn create(conn: &mut PgConnection, p: &CreateParams) -> QueryResult<UserExpe
             user_expenses::charged_user_id.eq(p.charged_user_id),
             user_expenses::begin_charging_at.eq(p.begin_charging_at),
             user_expenses::charge_method.eq(p.charge_method),
+            user_expenses::created_at.eq(p.created_at),
         ))
         .returning(user_expenses::id)
         .get_result(conn)
