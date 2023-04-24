@@ -7,7 +7,7 @@ use crate::types::UserRevenueId;
 pub struct CreateParams<'a> {
     pub user_id: i32,
     pub amount: i64,
-    pub description: &'a str,
+    pub description: Option<&'a str>,
     pub incoming_at: OffsetDateTime,
     pub created_at: OffsetDateTime,
 }
