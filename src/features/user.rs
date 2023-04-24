@@ -1,9 +1,17 @@
 use db::{
     enums::UserExpensesChargeMethod,
-    queries::{user_expense_installments, user_expenses},
-    types::{UserExpenseId, UserId},
+    queries::{user_expense_installments, user_expenses, user_payments, user_revenues},
+    types::{UserExpenseId, UserId, UserPaymentId, UserRevenueId},
 };
 use time::{Duration, OffsetDateTime};
+
+#[derive(Debug, thiserror::Error)]
+pub enum UserError {
+    #[error("Time conversion error: {0:?}")]
+    TimeError(time::error::ComponentRange),
+    #[error("Database error: {0:?}")]
+    DbError(db::Error),
+}
 
 pub async fn create(db: &db::Db) -> Result<UserId, db::Error> {
     Ok(db
@@ -11,6 +19,86 @@ pub async fn create(db: &db::Db) -> Result<UserId, db::Error> {
             db::queries::users::create(conn, OffsetDateTime::now_utc())
         })
         .await?)
+}
+
+pub struct CreateRevenueParams {
+    pub user_id: i32,
+    pub amount: i64,
+    pub description: Option<String>,
+    pub incoming_at: i64,
+}
+
+pub async fn create_revenue(
+    db: &db::Db,
+    CreateRevenueParams {
+        user_id,
+        amount,
+        description,
+        incoming_at,
+    }: CreateRevenueParams,
+) -> Result<UserRevenueId, UserError> {
+    let created_at = OffsetDateTime::now_utc();
+    let incoming_at =
+        OffsetDateTime::from_unix_timestamp(incoming_at).map_err(UserError::TimeError)?;
+
+    let id = db
+        .write(move |conn| {
+            user_revenues::create(
+                conn,
+                &user_revenues::CreateParams {
+                    user_id,
+                    amount,
+                    description: description.as_deref(),
+                    incoming_at,
+                    created_at,
+                },
+            )
+        })
+        .await
+        .map_err(UserError::DbError)?;
+
+    Ok(id)
+}
+
+pub struct CreatePaymentParams {
+    pub created_by: i32,
+    pub amount: i64,
+    pub payee_user_id: i32,
+    pub payer_user_id: i32,
+    pub payed_at: i64,
+}
+
+pub async fn create_payment(
+    db: &db::Db,
+    CreatePaymentParams {
+        created_by,
+        amount,
+        payee_user_id,
+        payer_user_id,
+        payed_at,
+    }: CreatePaymentParams,
+) -> Result<UserPaymentId, UserError> {
+    let created_at = OffsetDateTime::now_utc();
+    let payed_at = OffsetDateTime::from_unix_timestamp(payed_at).map_err(UserError::TimeError)?;
+
+    let id = db
+        .write(move |conn| {
+            user_payments::create(
+                conn,
+                &user_payments::CreateParams {
+                    created_by,
+                    amount,
+                    payee_user_id,
+                    payer_user_id,
+                    payed_at,
+                    created_at,
+                },
+            )
+        })
+        .await
+        .map_err(UserError::DbError)?;
+
+    Ok(id)
 }
 
 pub struct CreateExpenseParams {
@@ -28,14 +116,6 @@ pub enum CreateExpenseOutcome {
     Created(UserExpenseId),
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum CreateExpenseError {
-    #[error("Time conversion error: {0:?}")]
-    TimeError(time::error::ComponentRange),
-    #[error("Database error: {0:?}")]
-    DbError(db::Error),
-}
-
 pub async fn create_expense(
     db: &db::Db,
     CreateExpenseParams {
@@ -48,9 +128,10 @@ pub async fn create_expense(
         description,
         installments,
     }: CreateExpenseParams,
-) -> Result<CreateExpenseOutcome, CreateExpenseError> {
-    let begin_charging_at = OffsetDateTime::from_unix_timestamp(begin_charging_at)
-        .map_err(CreateExpenseError::TimeError)?;
+) -> Result<CreateExpenseOutcome, UserError> {
+    let created_at = OffsetDateTime::now_utc();
+    let begin_charging_at =
+        OffsetDateTime::from_unix_timestamp(begin_charging_at).map_err(UserError::TimeError)?;
 
     let id = db
         .write::<_, db::Error, _>(move |conn| {
@@ -64,6 +145,7 @@ pub async fn create_expense(
                     charged_user_id,
                     begin_charging_at,
                     charge_method,
+                    created_at,
                 },
             )?;
 
@@ -80,7 +162,7 @@ pub async fn create_expense(
             Ok(user_expense_id)
         })
         .await
-        .map_err(CreateExpenseError::DbError)?;
+        .map_err(UserError::DbError)?;
 
     Ok(CreateExpenseOutcome::Created(id))
 }

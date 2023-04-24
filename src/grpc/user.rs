@@ -1,11 +1,7 @@
-use db::{
-    enums::UserExpensesChargeMethod,
-    queries::{user_payments, user_revenues},
-};
-use time::OffsetDateTime;
+use db::enums::UserExpensesChargeMethod;
 use tonic::Status;
 
-use crate::features::user::{self, CreateExpenseError, CreateExpenseOutcome};
+use crate::features::user::{self, CreateExpenseOutcome, UserError};
 
 use super::proto::{
     create_expense_request, CreateExpenseRequest, CreatePaymentRequest, CreateRevenueRequest, Id,
@@ -22,51 +18,47 @@ pub(super) async fn create_revenue(
     db: &db::Db,
     request: CreateRevenueRequest,
 ) -> Result<Id, Status> {
-    let id = db
-        .write(move |conn| {
-            let incoming_at = OffsetDateTime::from_unix_timestamp(request.incoming_at).unwrap();
-
-            user_revenues::create(
-                conn,
-                &user_revenues::CreateParams {
-                    user_id: request.user_id,
-                    amount: request.amount as i64,
-                    description: &request.description,
-                    incoming_at,
-                    created_at: OffsetDateTime::now_utc(),
-                },
-            )
-        })
-        .await
-        .map_err(|_| Status::internal("db error"))?;
-
-    Ok(Id { id: *id })
+    match user::create_revenue(
+        db,
+        user::CreateRevenueParams {
+            user_id: request.user_id,
+            amount: request.amount as i64,
+            description: request.description,
+            incoming_at: request.incoming_at,
+        },
+    )
+    .await
+    {
+        Ok(id) => Ok(Id { id: *id }),
+        Err(_e @ UserError::TimeError(_)) => Err(Status::out_of_range(
+            "Invalid timestamp for begin_charging_at",
+        )),
+        Err(_e @ UserError::DbError(_)) => Err(Status::internal("Database error")),
+    }
 }
 
 pub(super) async fn create_payment(
     db: &db::Db,
     request: CreatePaymentRequest,
 ) -> Result<Id, Status> {
-    let id = db
-        .write(move |conn| {
-            let payed_at = OffsetDateTime::from_unix_timestamp(request.payed_at).unwrap();
-
-            user_payments::create(
-                conn,
-                &user_payments::CreateParams {
-                    created_by: request.created_by,
-                    amount: request.amount as i64,
-                    payee_user_id: request.payee_user_id,
-                    payer_user_id: request.payer_user_id,
-                    payed_at,
-                    created_at: OffsetDateTime::now_utc(),
-                },
-            )
-        })
-        .await
-        .map_err(|_| Status::internal("db error"))?;
-
-    Ok(Id { id: *id })
+    match user::create_payment(
+        db,
+        user::CreatePaymentParams {
+            created_by: request.created_by,
+            amount: request.amount as i64,
+            payee_user_id: request.payee_user_id,
+            payer_user_id: request.payer_user_id,
+            payed_at: request.payed_at,
+        },
+    )
+    .await
+    {
+        Ok(id) => Ok(Id { id: *id }),
+        Err(_e @ UserError::TimeError(_)) => Err(Status::out_of_range(
+            "Invalid timestamp for begin_charging_at",
+        )),
+        Err(_e @ UserError::DbError(_)) => Err(Status::internal("Database error")),
+    }
 }
 
 pub(super) async fn create_expense(
@@ -95,9 +87,9 @@ pub(super) async fn create_expense(
     .await
     {
         Ok(CreateExpenseOutcome::Created(id)) => Ok(Id { id: *id }),
-        Err(_e @ CreateExpenseError::TimeError(_)) => {
-            Err(Status::internal("Invalid timestamp for begin_charging_at"))
-        }
-        Err(_e @ CreateExpenseError::DbError(_)) => Err(Status::internal("Database error")),
+        Err(_e @ UserError::TimeError(_)) => Err(Status::out_of_range(
+            "Invalid timestamp for begin_charging_at",
+        )),
+        Err(_e @ UserError::DbError(_)) => Err(Status::internal("Database error")),
     }
 }
