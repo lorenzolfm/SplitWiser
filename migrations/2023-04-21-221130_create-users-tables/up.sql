@@ -2,11 +2,13 @@ CREATE TABLE user_revenues (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id),
 
-    amount BIGINT NOT NULL CHECK (amount > 0),
+    amount BIGINT NOT NULL,
     incoming_at TIMESTAMPTZ NOT NULL,
     description TEXT,
 
-    created_at TIMESTAMPTZ NOT NULL
+    created_at TIMESTAMPTZ NOT NULL,
+
+    CONSTRAINT check_amount_is_greater_than_zero CHECK (amount > 0)
 );
 
 CREATE TABLE user_payments (
@@ -19,7 +21,10 @@ CREATE TABLE user_payments (
     payer_user_id INT NOT NULL REFERENCES users(id),
     payed_at TIMESTAMPTZ NOT NULL,
 
-    created_at TIMESTAMPTZ NOT NULL
+    created_at TIMESTAMPTZ NOT NULL,
+
+    CONSTRAINT check_amount_is_greater_than_zero CHECK (amount > 0),
+    CONSTRAINT check_different_users CHECK (payee_user_id <> payer_user_id)
 );
 
 CREATE TYPE user_expenses_charge_method as ENUM (

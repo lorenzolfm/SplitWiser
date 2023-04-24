@@ -77,7 +77,6 @@ pub async fn create_payment(
         payed_at,
     }: CreatePaymentParams,
 ) -> Result<UserPaymentId, UserError> {
-    let created_at = OffsetDateTime::now_utc();
     let payed_at = OffsetDateTime::from_unix_timestamp(payed_at).map_err(UserError::TimeError)?;
 
     let id = db
@@ -90,7 +89,7 @@ pub async fn create_payment(
                     payee_user_id,
                     payer_user_id,
                     payed_at,
-                    created_at,
+                    created_at: OffsetDateTime::now_utc(),
                 },
             )
         })
@@ -203,4 +202,81 @@ mod tests {
             assert!(res.is_ok());
         }
     }
+
+    mod create_payment {
+        use db::types::UserPaymentId;
+
+        use crate::features::user::UserError;
+
+        async fn setup_with_amount(amount: i64) -> Result<UserPaymentId, UserError> {
+            let db = db::test::db();
+            let user_id = *super::create(&db).await.unwrap();
+
+            super::create_payment(
+                &db,
+                super::CreatePaymentParams {
+                    created_by: user_id,
+                    amount,
+                    payee_user_id: user_id,
+                    payer_user_id: *super::create(&db).await.unwrap(),
+                    payed_at: 1682333141,
+                },
+            )
+            .await
+        }
+
+        #[tokio::test]
+        async fn amount_should_be_greater_than_zero() {
+            let res = setup_with_amount(-1).await;
+            assert!(matches!(res.err(), Some(super::UserError::DbError(_))));
+
+            let res = setup_with_amount(0).await;
+            assert!(matches!(res.err(), Some(super::UserError::DbError(_))));
+
+            let res = setup_with_amount(1).await;
+            assert!(res.is_ok());
+        }
+
+        #[tokio::test]
+        async fn user_should_not_be_able_to_pay_himself() {
+            let db = db::test::db();
+            let user_id = *super::create(&db).await.unwrap();
+
+            let res = super::create_payment(
+                &db,
+                super::CreatePaymentParams {
+                    created_by: user_id,
+                    amount: 1,
+                    payee_user_id: user_id,
+                    payer_user_id: user_id,
+                    payed_at: 1682333141,
+                },
+            )
+            .await;
+
+            assert!(matches!(res.err(), Some(UserError::DbError(_))));
+        }
+
+        #[tokio::test]
+        async fn happy_path() {
+            let db = db::test::db();
+            let user_id = *super::create(&db).await.unwrap();
+
+            let res = super::create_payment(
+                &db,
+                super::CreatePaymentParams {
+                    created_by: user_id,
+                    amount: 1,
+                    payee_user_id: user_id,
+                    payer_user_id: *super::create(&db).await.unwrap(),
+                    payed_at: 1682333141,
+                },
+            )
+            .await;
+
+            assert!(res.is_ok());
+        }
+    }
+
+    mod create_expense {}
 }
