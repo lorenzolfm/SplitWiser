@@ -6,7 +6,9 @@ CREATE TABLE user_revenues (
     incoming_at TIMESTAMPTZ NOT NULL,
     description TEXT,
 
-    created_at TIMESTAMPTZ NOT NULL
+    created_at TIMESTAMPTZ NOT NULL,
+
+    CONSTRAINT user_revenue_amount_is_greater_than_zero CHECK (amount > 0)
 );
 
 CREATE TABLE user_payments (
@@ -19,7 +21,10 @@ CREATE TABLE user_payments (
     payer_user_id INT NOT NULL REFERENCES users(id),
     payed_at TIMESTAMPTZ NOT NULL,
 
-    created_at TIMESTAMPTZ NOT NULL
+    created_at TIMESTAMPTZ NOT NULL,
+
+    CONSTRAINT user_payment_amount_is_greater_than_zero CHECK (amount > 0),
+    CONSTRAINT payee_is_not_payer CHECK (payee_user_id <> payer_user_id)
 );
 
 CREATE TYPE user_expenses_charge_method as ENUM (
@@ -38,7 +43,12 @@ CREATE TABLE user_expenses (
     chargee_user_id INT NOT NULL REFERENCES users(id),
     charged_user_id INT NOT NULL REFERENCES users(id),
     charge_method user_expenses_charge_method NOT NULL,
-    begin_charging_at TIMESTAMPTZ NOT NULL
+    begin_charging_at TIMESTAMPTZ NOT NULL,
+
+    created_at TIMESTAMPTZ NOT NULL
+
+    CONSTRAINT user_expense_amount_is_greater_than_zero CHECK (amount > 0),
+    CONSTRAINT chargee_is_not_charged CHECK (charged_user_id <> chargee_user_id)
 ); 
 
 CREATE TABLE user_expense_installments (

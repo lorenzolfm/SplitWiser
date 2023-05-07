@@ -1,4 +1,5 @@
 mod env;
+mod features;
 mod grpc;
 
 #[tokio::main]

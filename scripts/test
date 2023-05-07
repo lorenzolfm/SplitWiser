@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+export DATABASE_URL=postgres://postgres:splitwiser@localhost/splitwiser_test
+
+CARGO_TEST_ARG=$1
+
+HAS_PENDING_MIGRATIONS=$(diesel migration pending)
+if [ $? -ne 0 ]
+then
+    echo "Setting up test database"
+    diesel database setup
+    diesel migration run
+elif [ $HAS_PENDING_MIGRATIONS = "true" ]
+then
+    echo "Running migrations"
+    diesel migration run
+fi
+cargo test --locked --workspace -- --test-threads=1 $CARGO_TEST_ARG
