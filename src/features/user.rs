@@ -23,7 +23,7 @@ pub async fn create(db: &db::Db) -> Result<UserId, db::Error> {
 
 pub struct CreateRevenueParams {
     pub user_id: i32,
-    pub amount: i64,
+    pub amount_cents: i64,
     pub description: Option<String>,
     pub incoming_at: i64,
 }
@@ -32,7 +32,7 @@ pub async fn create_revenue(
     db: &db::Db,
     CreateRevenueParams {
         user_id,
-        amount,
+        amount_cents,
         description,
         incoming_at,
     }: CreateRevenueParams,
@@ -46,7 +46,7 @@ pub async fn create_revenue(
                 conn,
                 &user_revenues::CreateParams {
                     user_id,
-                    amount,
+                    amount_cents,
                     description: description.as_deref(),
                     incoming_at,
                     created_at: OffsetDateTime::now_utc(),
@@ -61,7 +61,7 @@ pub async fn create_revenue(
 
 pub struct CreatePaymentParams {
     pub created_by: i32,
-    pub amount: i64,
+    pub amount_cents: i64,
     pub payee_user_id: i32,
     pub payer_user_id: i32,
     pub payed_at: i64,
@@ -71,7 +71,7 @@ pub async fn create_payment(
     db: &db::Db,
     CreatePaymentParams {
         created_by,
-        amount,
+        amount_cents,
         payee_user_id,
         payer_user_id,
         payed_at,
@@ -85,7 +85,7 @@ pub async fn create_payment(
                 conn,
                 &user_payments::CreateParams {
                     created_by,
-                    amount,
+                    amount_cents,
                     payee_user_id,
                     payer_user_id,
                     payed_at,
@@ -100,7 +100,7 @@ pub async fn create_payment(
 }
 
 pub struct CreateExpenseParams {
-    pub total_amount: i64,
+    pub amount_cents: i64,
     pub begin_charging_at: i64,
     pub created_by: i32,
     pub charged_user_id: i32,
@@ -117,7 +117,7 @@ pub enum CreateExpenseOutcome {
 pub async fn create_expense(
     db: &db::Db,
     CreateExpenseParams {
-        total_amount,
+        amount_cents,
         begin_charging_at,
         created_by,
         charged_user_id,
@@ -137,7 +137,7 @@ pub async fn create_expense(
                 conn,
                 &user_expenses::CreateParams {
                     created_by,
-                    total_amount,
+                    amount_cents,
                     description: description.as_deref(),
                     chargee_user_id,
                     charged_user_id,
@@ -151,7 +151,7 @@ pub async fn create_expense(
                 .map(|i| user_expense_installments::CreateParams {
                     user_expense_id,
                     charged_at: begin_charging_at + Duration::weeks(4 * (i as i64)),
-                    amount: (total_amount / installments as i64),
+                    amount_cents: (amount_cents / installments as i64),
                 })
                 .collect();
 
@@ -174,7 +174,7 @@ mod tests {
 
         use crate::features::user::UserError;
 
-        async fn setup_with_amount(amount: i64) -> Result<UserRevenueId, UserError> {
+        async fn setup_with_amount(amount_cents: i64) -> Result<UserRevenueId, UserError> {
             let db = db::test::db();
             let user_id = *super::create(&db).await.unwrap();
 
@@ -182,7 +182,7 @@ mod tests {
                 &db,
                 super::CreateRevenueParams {
                     user_id,
-                    amount,
+                    amount_cents,
                     description: Some("stuff".to_string()),
                     incoming_at: 1682333141,
                 },
@@ -208,7 +208,7 @@ mod tests {
 
         use crate::features::user::UserError;
 
-        async fn setup_with_amount(amount: i64) -> Result<UserPaymentId, UserError> {
+        async fn setup_with_amount(amount_cents: i64) -> Result<UserPaymentId, UserError> {
             let db = db::test::db();
             let user_id = *super::create(&db).await.unwrap();
 
@@ -216,7 +216,7 @@ mod tests {
                 &db,
                 super::CreatePaymentParams {
                     created_by: user_id,
-                    amount,
+                    amount_cents,
                     payee_user_id: user_id,
                     payer_user_id: *super::create(&db).await.unwrap(),
                     payed_at: 1682333141,
@@ -246,7 +246,7 @@ mod tests {
                 &db,
                 super::CreatePaymentParams {
                     created_by: user_id,
-                    amount: 1,
+                    amount_cents: 1,
                     payee_user_id: user_id,
                     payer_user_id: user_id,
                     payed_at: 1682333141,
@@ -266,7 +266,7 @@ mod tests {
                 &db,
                 super::CreatePaymentParams {
                     created_by: user_id,
-                    amount: 1,
+                    amount_cents: 1,
                     payee_user_id: user_id,
                     payer_user_id: *super::create(&db).await.unwrap(),
                     payed_at: 1682333141,
@@ -281,7 +281,7 @@ mod tests {
     mod create_expense {
         use crate::features::user::{CreateExpenseOutcome, UserError};
 
-        async fn setup_with_amount(amount: i64) -> Result<CreateExpenseOutcome, UserError> {
+        async fn setup_with_amount(amount_cents: i64) -> Result<CreateExpenseOutcome, UserError> {
             let db = db::test::db();
             let u0 = *super::create(&db).await.unwrap();
             let u1 = *super::create(&db).await.unwrap();
@@ -289,7 +289,7 @@ mod tests {
             super::create_expense(
                 &db,
                 super::CreateExpenseParams {
-                    total_amount: amount,
+                    amount_cents,
                     begin_charging_at: 1682333141,
                     created_by: u0,
                     charged_user_id: u0,
@@ -322,7 +322,7 @@ mod tests {
             let res = super::create_expense(
                 &db,
                 super::CreateExpenseParams {
-                    total_amount: 1000,
+                    amount_cents: 1000,
                     begin_charging_at: 1682333141,
                     created_by: u0,
                     charged_user_id: u0,
@@ -346,7 +346,7 @@ mod tests {
             let res = super::create_expense(
                 &db,
                 super::CreateExpenseParams {
-                    total_amount: 1000,
+                    amount_cents: 1000,
                     begin_charging_at: 1682333141,
                     created_by: u0,
                     charged_user_id: u0,

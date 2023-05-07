@@ -7,7 +7,7 @@ use crate::types::UserExpenseId;
 pub struct CreateParams {
     pub user_expense_id: UserExpenseId,
     pub charged_at: OffsetDateTime,
-    pub amount: i64,
+    pub amount_cents: i64,
 }
 
 pub fn create(conn: &mut PgConnection, installments: &[CreateParams]) -> QueryResult<usize> {
@@ -15,7 +15,7 @@ pub fn create(conn: &mut PgConnection, installments: &[CreateParams]) -> QueryRe
         (
             user_expense_installments::user_expense_id.eq(*p.user_expense_id),
             user_expense_installments::charged_at.eq(p.charged_at),
-            user_expense_installments::amount.eq(p.amount),
+            user_expense_installments::amount_cents.eq(p.amount_cents),
         )
     });
 

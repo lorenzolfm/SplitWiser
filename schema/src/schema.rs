@@ -11,7 +11,7 @@ diesel::table! {
         id -> Int4,
         user_expense_id -> Int4,
         charged_at -> Timestamptz,
-        amount -> Int8,
+        amount_cents -> Int8,
     }
 }
 
@@ -22,7 +22,7 @@ diesel::table! {
     user_expenses (id) {
         id -> Int4,
         created_by -> Int4,
-        amount -> Int8,
+        amount_cents -> Int8,
         description -> Nullable<Text>,
         chargee_user_id -> Int4,
         charged_user_id -> Int4,
@@ -36,7 +36,7 @@ diesel::table! {
     user_payments (id) {
         id -> Int4,
         created_by -> Int4,
-        amount -> Int8,
+        amount_cents -> Int8,
         payee_user_id -> Int4,
         payer_user_id -> Int4,
         payed_at -> Timestamptz,
@@ -48,7 +48,7 @@ diesel::table! {
     user_revenues (id) {
         id -> Int4,
         user_id -> Int4,
-        amount -> Int8,
+        amount_cents -> Int8,
         incoming_at -> Timestamptz,
         description -> Nullable<Text>,
         created_at -> Timestamptz,

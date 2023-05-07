@@ -6,7 +6,7 @@ use crate::types::UserPaymentId;
 
 pub struct CreateParams {
     pub created_by: i32,
-    pub amount: i64,
+    pub amount_cents: i64,
     pub payee_user_id: i32,
     pub payer_user_id: i32,
     pub payed_at: OffsetDateTime,
@@ -17,7 +17,7 @@ pub fn create(conn: &mut PgConnection, p: &CreateParams) -> QueryResult<UserPaym
     diesel::insert_into(user_payments::table)
         .values((
             user_payments::created_by.eq(p.created_by),
-            user_payments::amount.eq(p.amount),
+            user_payments::amount_cents.eq(p.amount_cents),
             user_payments::payee_user_id.eq(p.payee_user_id),
             user_payments::payer_user_id.eq(p.payer_user_id),
             user_payments::payed_at.eq(p.payed_at),

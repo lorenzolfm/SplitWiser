@@ -22,7 +22,7 @@ pub(super) async fn create_revenue(
         db,
         user::CreateRevenueParams {
             user_id: request.user_id,
-            amount: request.amount as i64,
+            amount_cents: request.amount_cents as i64,
             description: request.description,
             incoming_at: request.incoming_at,
         },
@@ -45,7 +45,7 @@ pub(super) async fn create_payment(
         db,
         user::CreatePaymentParams {
             created_by: request.created_by,
-            amount: request.amount as i64,
+            amount_cents: request.amount_cents as i64,
             payee_user_id: request.payee_user_id,
             payer_user_id: request.payer_user_id,
             payed_at: request.payed_at,
@@ -74,7 +74,7 @@ pub(super) async fn create_expense(
     match crate::features::user::create_expense(
         db,
         crate::features::user::CreateExpenseParams {
-            total_amount: request.amount as i64,
+            amount_cents: request.amount_cents as i64,
             begin_charging_at: request.begin_charging_at,
             created_by: request.created_by,
             charged_user_id: request.charged_user_id,
