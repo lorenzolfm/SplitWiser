@@ -27,11 +27,102 @@ pub fn create(conn: &mut PgConnection, p: &CreateParams) -> QueryResult<UserPaym
         .get_result(conn)
 }
 
-pub fn delete(conn: &mut PgConnection, id: i32, user_id: i32) -> QueryResult<()> {
+pub fn delete(conn: &mut PgConnection, id: i32, user_id: i32) -> QueryResult<UserPaymentId> {
     diesel::delete(user_payments::table)
         .filter(user_payments::id.eq(id))
         .filter(user_payments::created_by.eq(user_id))
-        .execute(conn)?;
+        .returning(user_payments::id)
+        .get_result(conn)
+}
 
-    Ok(())
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::test;
+
+    mod create {
+        use super::*;
+        use crate::queries::users;
+        use diesel::QueryResult;
+
+        fn setup_with_amount(amount_cents: i64) -> QueryResult<super::UserPaymentId> {
+            let mut conn = test::conn();
+            let u0 = *users::create(&mut conn, OffsetDateTime::now_utc()).unwrap();
+            let u1 = *users::create(&mut conn, OffsetDateTime::now_utc()).unwrap();
+
+            super::create(
+                &mut conn,
+                &super::CreateParams {
+                    created_by: u0,
+                    amount_cents,
+                    payee_user_id: u0,
+                    payer_user_id: u1,
+                    payed_at: OffsetDateTime::now_utc(),
+                    created_at: OffsetDateTime::now_utc(),
+                },
+            )
+        }
+
+        #[test]
+        fn amount_cents_should_be_greater_than_zero() {
+            let res = setup_with_amount(-1);
+            assert!(matches!(
+                res.err(),
+                Some(diesel::result::Error::DatabaseError(_, _))
+            ));
+
+            let res = setup_with_amount(0);
+            assert!(matches!(
+                res.err(),
+                Some(diesel::result::Error::DatabaseError(_, _))
+            ));
+
+            let res = setup_with_amount(1);
+            assert!(res.is_ok());
+        }
+
+        #[test]
+        fn payee_and_payer_cannot_be_the_same() {
+            let mut conn = test::conn();
+            let u0 = *users::create(&mut conn, OffsetDateTime::now_utc()).unwrap();
+
+            let res = super::create(
+                &mut conn,
+                &super::CreateParams {
+                    created_by: u0,
+                    amount_cents: 1,
+                    payee_user_id: u0,
+                    payer_user_id: u0,
+                    payed_at: OffsetDateTime::now_utc(),
+                    created_at: OffsetDateTime::now_utc(),
+                },
+            );
+
+            assert!(matches!(
+                res.err(),
+                Some(diesel::result::Error::DatabaseError(_, _))
+            ));
+        }
+
+        #[test]
+        fn happy_path() {
+            let mut conn = test::conn();
+            let u0 = *users::create(&mut conn, OffsetDateTime::now_utc()).unwrap();
+            let u1 = *users::create(&mut conn, OffsetDateTime::now_utc()).unwrap();
+
+            let res = super::create(
+                &mut conn,
+                &super::CreateParams {
+                    created_by: u0,
+                    amount_cents: 1,
+                    payee_user_id: u0,
+                    payer_user_id: u1,
+                    payed_at: OffsetDateTime::now_utc(),
+                    created_at: OffsetDateTime::now_utc(),
+                },
+            );
+
+            assert!(res.is_ok());
+        }
+    }
 }
