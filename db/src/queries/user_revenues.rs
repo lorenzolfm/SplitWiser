@@ -24,3 +24,12 @@ pub fn create(conn: &mut PgConnection, p: &CreateParams) -> QueryResult<UserReve
         .returning(user_revenues::id)
         .get_result(conn)
 }
+
+pub fn delete(conn: &mut PgConnection, id: i32, user_id: i32) -> QueryResult<()> {
+    diesel::delete(user_revenues::table)
+        .filter(user_revenues::id.eq(id))
+        .filter(user_revenues::user_id.eq(user_id))
+        .execute(conn)?;
+
+    Ok(())
+}

@@ -53,7 +53,7 @@ CREATE TABLE user_expenses (
 
 CREATE TABLE user_expense_installments (
     id SERIAL PRIMARY KEY,
-    user_expense_id INT NOT NULL REFERENCES user_expenses(id),
+    user_expense_id INT NOT NULL REFERENCES user_expenses(id) ON DELETE CASCADE,
     charged_at TIMESTAMPTZ NOT NULL,
 
     amount_cents BIGINT NOT NULL
