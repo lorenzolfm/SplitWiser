@@ -17,14 +17,14 @@ message Id {
 
 message CreateRevenueRequest {
     int32 user_id = 1;
-    uint64 amount = 2;
+    uint64 amount_cents = 2;
     int64 incoming_at = 3;
     optional string description = 4;
 }
 
 message CreatePaymentRequest {
     int32 created_by = 1;
-    uint64 amount = 2;
+    uint64 amount_cents = 2;
     int32 payee_user_id = 3;
     int32 payer_user_id = 4;
     int64 payed_at = 5;
@@ -32,7 +32,7 @@ message CreatePaymentRequest {
 
 message CreateExpenseRequest {
     int32 created_by = 1;
-    uint64 amount = 2;
+    uint64 amount_cents = 2;
     optional string description = 3;
     int32 chargee_user_id = 4;
     int32 charged_user_id = 5;
