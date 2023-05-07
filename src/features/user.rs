@@ -278,5 +278,90 @@ mod tests {
         }
     }
 
-    mod create_expense {}
+    mod create_expense {
+        use crate::features::user::{CreateExpenseOutcome, UserError};
+
+        async fn setup_with_amount(amount: i64) -> Result<CreateExpenseOutcome, UserError> {
+            let db = db::test::db();
+            let u0 = *super::create(&db).await.unwrap();
+            let u1 = *super::create(&db).await.unwrap();
+
+            super::create_expense(
+                &db,
+                super::CreateExpenseParams {
+                    total_amount: amount,
+                    begin_charging_at: 1682333141,
+                    created_by: u0,
+                    charged_user_id: u0,
+                    chargee_user_id: u1,
+                    charge_method: db::enums::UserExpensesChargeMethod::Even,
+                    description: None,
+                    installments: 1,
+                },
+            )
+            .await
+        }
+
+        #[tokio::test]
+        async fn amount_should_be_greater_than_zero() {
+            let res = setup_with_amount(-1).await;
+            assert!(matches!(res.err(), Some(super::UserError::DbError(_))));
+
+            let res = setup_with_amount(0).await;
+            assert!(matches!(res.err(), Some(super::UserError::DbError(_))));
+
+            let res = setup_with_amount(1).await;
+            assert!(res.is_ok());
+        }
+
+        #[tokio::test]
+        async fn chargee_and_charged_cannot_be_the_same() {
+            let db = db::test::db();
+            let u0 = *super::create(&db).await.unwrap();
+
+            let res = super::create_expense(
+                &db,
+                super::CreateExpenseParams {
+                    total_amount: 1000,
+                    begin_charging_at: 1682333141,
+                    created_by: u0,
+                    charged_user_id: u0,
+                    chargee_user_id: u0,
+                    charge_method: db::enums::UserExpensesChargeMethod::Even,
+                    description: None,
+                    installments: 1,
+                },
+            )
+            .await;
+
+            assert!(matches!(res.err(), Some(super::UserError::DbError(_))));
+        }
+
+        #[tokio::test]
+        async fn test_happy_path() {
+            let db = db::test::db();
+            let u0 = *super::create(&db).await.unwrap();
+            let u1 = *super::create(&db).await.unwrap();
+
+            let res = super::create_expense(
+                &db,
+                super::CreateExpenseParams {
+                    total_amount: 1000,
+                    begin_charging_at: 1682333141,
+                    created_by: u0,
+                    charged_user_id: u0,
+                    chargee_user_id: u1,
+                    charge_method: db::enums::UserExpensesChargeMethod::Even,
+                    description: None,
+                    installments: 1,
+                },
+            )
+            .await;
+
+            assert!(res.is_ok());
+        }
+
+        #[tokio::test]
+        async fn expected_amount_of_installments_is_created() {}
+    }
 }
