@@ -2,5 +2,5 @@
 
 # TODOs
 
-* I don't think raw timestamps is a good idea
+* Test Installments
 * Installments can be Option (?)
