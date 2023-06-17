@@ -210,4 +210,47 @@ mod test {
             }
         }
     }
+
+    mod find_for_period {
+        use time::{Duration, OffsetDateTime};
+
+        #[test]
+        fn test_find_for_period() {
+            let mut conn = crate::test::conn();
+            let u0 = *crate::queries::users::create(&mut conn, OffsetDateTime::now_utc()).unwrap();
+            let u1 = *crate::queries::users::create(&mut conn, OffsetDateTime::now_utc()).unwrap();
+
+            let now = OffsetDateTime::now_utc();
+            let amount_cents = 100;
+            let charge_method = super::UserExpensesChargeMethod::Even;
+
+            for i in 0..5 {
+                super::create(
+                    &mut conn,
+                    &super::CreateParams {
+                        amount_cents,
+                        created_by: u0,
+                        description: None,
+                        chargee_user_id: u0,
+                        charged_user_id: u1,
+                        begin_charging_at: now + Duration::weeks(4 * i as i64),
+                        charge_method: charge_method.clone(),
+                        created_at: now,
+                        installments: 1,
+                    },
+                )
+                .unwrap();
+            }
+
+            let from = now;
+            let until = now + Duration::weeks(16);
+            let res = super::find_for_period(&mut conn, u0, u1, from, until).unwrap();
+
+            assert_eq!(res.len(), 4);
+            for expense in res {
+                assert_eq!(expense.amount_cents, amount_cents);
+                assert!(matches!(expense.charge_method, charge_method));
+            }
+        }
+    }
 }
