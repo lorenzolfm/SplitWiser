@@ -8,12 +8,12 @@ use time::OffsetDateTime;
 #[derive(Debug, thiserror::Error)]
 pub enum UserError {
     #[error("Time conversion error: {0:?}")]
-    TimeError(time::error::ComponentRange),
+    Time(#[from] time::error::ComponentRange),
     #[error("Database error: {0:?}")]
-    DbError(db::Error),
+    Database(#[from] db::Error),
 }
 
-pub async fn create(db: &db::Db) -> Result<UserId, db::Error> {
+pub async fn create(db: &db::Db) -> Result<UserId, UserError> {
     Ok(db
         .write::<_, db::Error, _>(move |conn| {
             db::queries::users::create(conn, OffsetDateTime::now_utc())
@@ -37,10 +37,9 @@ pub async fn create_revenue(
         incoming_at,
     }: CreateRevenueParams,
 ) -> Result<UserRevenueId, UserError> {
-    let incoming_at =
-        OffsetDateTime::from_unix_timestamp(incoming_at).map_err(UserError::TimeError)?;
+    let incoming_at = OffsetDateTime::from_unix_timestamp(incoming_at)?;
 
-    let id = db
+    Ok(db
         .write(move |conn| {
             user_revenues::create(
                 conn,
@@ -53,10 +52,7 @@ pub async fn create_revenue(
                 },
             )
         })
-        .await
-        .map_err(UserError::DbError)?;
-
-    Ok(id)
+        .await?)
 }
 
 pub struct CreatePaymentParams {
@@ -77,9 +73,9 @@ pub async fn create_payment(
         payed_at,
     }: CreatePaymentParams,
 ) -> Result<UserPaymentId, UserError> {
-    let payed_at = OffsetDateTime::from_unix_timestamp(payed_at).map_err(UserError::TimeError)?;
+    let payed_at = OffsetDateTime::from_unix_timestamp(payed_at)?;
 
-    let id = db
+    Ok(db
         .write(move |conn| {
             user_payments::create(
                 conn,
@@ -93,10 +89,7 @@ pub async fn create_payment(
                 },
             )
         })
-        .await
-        .map_err(UserError::DbError)?;
-
-    Ok(id)
+        .await?)
 }
 
 pub struct CreateExpenseParams {
@@ -128,8 +121,7 @@ pub async fn create_expense(
     }: CreateExpenseParams,
 ) -> Result<CreateExpenseOutcome, UserError> {
     let created_at = OffsetDateTime::now_utc();
-    let begin_charging_at =
-        OffsetDateTime::from_unix_timestamp(begin_charging_at).map_err(UserError::TimeError)?;
+    let begin_charging_at = OffsetDateTime::from_unix_timestamp(begin_charging_at)?;
 
     let id = db
         .write::<_, db::Error, _>(move |conn| {
@@ -148,8 +140,7 @@ pub async fn create_expense(
                 },
             )
         })
-        .await
-        .map_err(UserError::DbError)?;
+        .await?;
 
     Ok(CreateExpenseOutcome::Created(id))
 }
