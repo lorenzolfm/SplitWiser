@@ -1,9 +1,9 @@
 use db::{
     enums::UserExpensesChargeMethod,
-    queries::{user_expense_installments, user_expenses, user_payments, user_revenues},
+    queries::{user_expenses, user_payments, user_revenues},
     types::{UserExpenseId, UserId, UserPaymentId, UserRevenueId},
 };
-use time::{Duration, OffsetDateTime};
+use time::OffsetDateTime;
 
 #[derive(Debug, thiserror::Error)]
 pub enum UserError {
@@ -133,7 +133,7 @@ pub async fn create_expense(
 
     let id = db
         .write::<_, db::Error, _>(move |conn| {
-            let user_expense_id = user_expenses::create(
+            user_expenses::create(
                 conn,
                 &user_expenses::CreateParams {
                     created_by,
@@ -144,20 +144,9 @@ pub async fn create_expense(
                     begin_charging_at,
                     charge_method,
                     created_at,
+                    installments: installments as i32,
                 },
-            )?;
-
-            let installments: Vec<_> = (0..installments)
-                .map(|i| user_expense_installments::CreateParams {
-                    user_expense_id,
-                    charged_at: begin_charging_at + Duration::weeks(4 * (i as i64)),
-                    amount_cents: (amount_cents / installments as i64),
-                })
-                .collect();
-
-            user_expense_installments::create(conn, &installments)?;
-
-            Ok(user_expense_id)
+            )
         })
         .await
         .map_err(UserError::DbError)?;
