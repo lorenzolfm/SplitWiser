@@ -1,6 +1,6 @@
 use diesel::{ExpressionMethods, PgConnection, QueryResult, RunQueryDsl};
 use schema::{enums::UserExpensesChargeMethod, schema::user_expenses};
-use time::OffsetDateTime;
+use time::{Duration, OffsetDateTime};
 
 use crate::types::UserExpenseId;
 
@@ -13,10 +13,11 @@ pub struct CreateParams<'a> {
     pub begin_charging_at: OffsetDateTime,
     pub charge_method: UserExpensesChargeMethod,
     pub created_at: OffsetDateTime,
+    pub installments: i32,
 }
 
 pub fn create(conn: &mut PgConnection, p: &CreateParams) -> QueryResult<UserExpenseId> {
-    diesel::insert_into(user_expenses::table)
+    let user_expense_id = diesel::insert_into(user_expenses::table)
         .values((
             user_expenses::created_by.eq(p.created_by),
             user_expenses::amount_cents.eq(p.amount_cents),
@@ -28,7 +29,21 @@ pub fn create(conn: &mut PgConnection, p: &CreateParams) -> QueryResult<UserExpe
             user_expenses::created_at.eq(p.created_at),
         ))
         .returning(user_expenses::id)
-        .get_result(conn)
+        .get_result(conn)?;
+
+    let installments: Vec<_> = (0..p.installments)
+        .map(
+            |i| crate::queries::user_expense_installments::CreateParams {
+                user_expense_id,
+                charged_at: p.begin_charging_at + Duration::weeks(4 * (i as i64)),
+                amount_cents: (p.amount_cents / p.installments as i64),
+            },
+        )
+        .collect();
+
+    crate::queries::user_expense_installments::create(conn, &installments)?;
+
+    Ok(user_expense_id)
 }
 
 pub fn delete(conn: &mut PgConnection, id: i32, user_id: i32) -> QueryResult<UserExpenseId> {
@@ -65,6 +80,7 @@ mod test {
                     begin_charging_at: OffsetDateTime::now_utc(),
                     charge_method: super::UserExpensesChargeMethod::Even,
                     created_at: OffsetDateTime::now_utc(),
+                    installments: 1,
                 },
             )
         }
@@ -103,6 +119,7 @@ mod test {
                     begin_charging_at: OffsetDateTime::now_utc(),
                     charge_method: super::UserExpensesChargeMethod::Even,
                     created_at: OffsetDateTime::now_utc(),
+                    installments: 1,
                 },
             );
 
@@ -129,10 +146,68 @@ mod test {
                     begin_charging_at: OffsetDateTime::now_utc(),
                     charge_method: super::UserExpensesChargeMethod::Even,
                     created_at: OffsetDateTime::now_utc(),
+                    installments: 1,
                 },
             );
 
             assert!(res.is_ok());
+        }
+
+        #[test]
+        fn installments_are_created_correctly() {
+            let mut conn = test::conn();
+            let u0 = *users::create(&mut conn, OffsetDateTime::now_utc()).unwrap();
+            let u1 = *users::create(&mut conn, OffsetDateTime::now_utc()).unwrap();
+
+            let begin_charging_at = OffsetDateTime::now_utc();
+            let amount_cents = 100;
+            let installments = 4;
+
+            let res = super::create(
+                &mut conn,
+                &super::CreateParams {
+                    amount_cents,
+                    created_by: u0,
+                    description: None,
+                    chargee_user_id: u0,
+                    charged_user_id: u1,
+                    begin_charging_at,
+                    charge_method: super::UserExpensesChargeMethod::Even,
+                    created_at: OffsetDateTime::now_utc(),
+                    installments,
+                },
+            );
+
+            assert!(res.is_ok());
+
+            let user_expense_id = res.unwrap();
+            let installments_from_db =
+                crate::queries::user_expense_installments::find_by_user_expense_id(
+                    &mut conn,
+                    *user_expense_id,
+                )
+                .unwrap();
+
+            assert_eq!(installments_from_db.len(), installments as usize);
+
+            for (i, installment) in installments_from_db.iter().enumerate() {
+                assert_eq!(
+                    installment.charged_at.year(),
+                    (begin_charging_at + Duration::weeks(4 * (i as i64))).year()
+                );
+                assert_eq!(
+                    installment.charged_at.month(),
+                    (begin_charging_at + Duration::weeks(4 * (i as i64))).month()
+                );
+                assert_eq!(
+                    installment.charged_at.day(),
+                    (begin_charging_at + Duration::weeks(4 * (i as i64))).day()
+                );
+                assert_eq!(
+                    installment.amount_cents,
+                    amount_cents / (installments as i64)
+                );
+            }
         }
     }
 }
