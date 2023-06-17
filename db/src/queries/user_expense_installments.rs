@@ -1,4 +1,4 @@
-use diesel::{ExpressionMethods, PgConnection, QueryResult, RunQueryDsl};
+use diesel::{ExpressionMethods, PgConnection, QueryDsl, QueryResult, Queryable, RunQueryDsl};
 use schema::schema::user_expense_installments;
 use time::OffsetDateTime;
 
@@ -22,6 +22,22 @@ pub fn create(conn: &mut PgConnection, installments: &[CreateParams]) -> QueryRe
     diesel::insert_into(user_expense_installments::table)
         .values(tuples.collect::<Vec<_>>())
         .execute(conn)
+}
+
+#[derive(Queryable)]
+pub struct Installment {
+    pub amount_cents: i64,
+    pub charged_at: OffsetDateTime,
+}
+
+pub fn find_by_user_expense_id(conn: &mut PgConnection, id: i32) -> QueryResult<Vec<Installment>> {
+    user_expense_installments::table
+        .filter(user_expense_installments::user_expense_id.eq(id))
+        .select((
+            user_expense_installments::amount_cents,
+            user_expense_installments::charged_at,
+        ))
+        .get_results(conn)
 }
 
 #[cfg(test)]
@@ -50,6 +66,7 @@ mod test {
                     begin_charging_at: OffsetDateTime::now_utc(),
                     charge_method: crate::enums::UserExpensesChargeMethod::Even,
                     created_at: OffsetDateTime::now_utc(),
+                    installments: 1,
                 },
             )
             .unwrap();
