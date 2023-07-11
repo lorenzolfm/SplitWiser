@@ -9,6 +9,7 @@ service Splitwiser {
   rpc CreateRevenue (CreateRevenueRequest) returns (Id);
   rpc CreatePayment (CreatePaymentRequest) returns (Id);
   rpc CreateExpense (CreateExpenseRequest) returns (Id);
+  rpc GetStatement (GetStatementRequest) returns (GetStatementResponse);
 }
 
 message Id {
@@ -45,4 +46,14 @@ message CreateExpenseRequest {
         Proportional = 1;
         Full = 2;
     }
+}
+
+message GetStatementRequest {
+    repeated int32 user_ids = 1;
+    uint64 from_timestamp = 2;
+    uint64 to_timestamp = 3;
+}
+
+message GetStatementResponse {
+    repeated int64 bills = 1;
 }

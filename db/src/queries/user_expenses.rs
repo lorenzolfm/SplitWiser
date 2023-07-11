@@ -1,5 +1,8 @@
-use diesel::{ExpressionMethods, PgConnection, QueryResult, RunQueryDsl};
-use schema::{enums::UserExpensesChargeMethod, schema::user_expenses};
+use crate::{
+    enums::UserExpensesChargeMethod,
+    schema::{user_expense_installments, user_expenses},
+};
+use diesel::{ExpressionMethods, PgConnection, QueryDsl, QueryResult, Queryable, RunQueryDsl};
 use time::{Duration, OffsetDateTime};
 
 use crate::types::UserExpenseId;
@@ -52,6 +55,32 @@ pub fn delete(conn: &mut PgConnection, id: i32, user_id: i32) -> QueryResult<Use
         .filter(user_expenses::created_by.eq(user_id))
         .returning(user_expenses::id)
         .get_result(conn)
+}
+
+#[derive(Queryable)]
+pub struct Expense {
+    pub amount_cents: i64,
+    pub charge_method: UserExpensesChargeMethod,
+}
+
+pub fn find_for_period(
+    conn: &mut PgConnection,
+    chargee: i32,
+    charged: i32,
+    from: OffsetDateTime,
+    until: OffsetDateTime,
+) -> QueryResult<Vec<Expense>> {
+    user_expenses::table
+        .inner_join(user_expense_installments::table)
+        .filter(user_expenses::chargee_user_id.eq(chargee))
+        .filter(user_expenses::charged_user_id.eq(charged))
+        .filter(user_expense_installments::charged_at.gt(from))
+        .filter(user_expense_installments::charged_at.le(until))
+        .select((
+            user_expense_installments::amount_cents,
+            user_expenses::charge_method,
+        ))
+        .get_results(conn)
 }
 
 #[cfg(test)]

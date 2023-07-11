@@ -2,8 +2,12 @@ use futures::{Future, TryFutureExt};
 
 use tonic::{Request, Response, Status};
 
-use self::proto::{CreateExpenseRequest, CreatePaymentRequest, CreateRevenueRequest, Id};
+use self::proto::{
+    CreateExpenseRequest, CreatePaymentRequest, CreateRevenueRequest, GetStatementRequest,
+    GetStatementResponse, Id,
+};
 
+mod statement;
 mod user;
 
 pub mod proto {
@@ -47,6 +51,22 @@ impl proto::splitwiser_server::Splitwiser for Server {
         user::create_expense(&self.db, request.into_inner())
             .map_ok(Response::new)
             .await
+    }
+
+    async fn get_statement(
+        &self,
+        request: Request<GetStatementRequest>,
+    ) -> Result<Response<GetStatementResponse>, Status> {
+        let request = request.into_inner();
+
+        statement::get(
+            &self.db,
+            request.user_ids,
+            request.from_timestamp,
+            request.to_timestamp,
+        )
+        .map_ok(Response::new)
+        .await
     }
 }
 

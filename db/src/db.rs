@@ -17,6 +17,18 @@ pub fn build(database_url: &str) -> Result<Db, r2d2::Error> {
 }
 
 impl Db {
+    pub async fn read<R, E, F>(&self, f: F) -> Result<R, E>
+    where
+        R: 'static + Send,
+        E: 'static + Send + From<diesel::result::Error>,
+        F: 'static + Send + FnOnce(&mut PgConnection) -> Result<R, E>,
+    {
+        let db = self.clone();
+        tokio::task::spawn_blocking(move || read(&mut *db.conn_or_rollback()?, f))
+            .await
+            .unwrap()
+    }
+
     pub async fn write<R, E, F>(&self, f: F) -> Result<R, E>
     where
         R: 'static + Send,
@@ -37,6 +49,18 @@ impl Db {
 }
 
 #[cfg(not(feature = "test"))]
+fn read<R, E, F>(conn: &mut PgConnection, f: F) -> Result<R, E>
+where
+    R: 'static + Send,
+    E: 'static + Send + From<diesel::result::Error>,
+    F: 'static + Send + FnOnce(&mut PgConnection) -> Result<R, E>,
+{
+    let builder = conn.build_transaction();
+    let mut transaction = builder.serializable().read_only().deferrable();
+    transaction.run(f)
+}
+
+#[cfg(not(feature = "test"))]
 fn write<R, E, F>(conn: &mut PgConnection, f: F) -> Result<R, E>
 where
     R: 'static + Send,
@@ -50,6 +74,17 @@ where
 
 #[cfg(feature = "test")]
 fn write<R, E, F>(conn: &mut PgConnection, f: F) -> Result<R, E>
+where
+    R: 'static + Send,
+    E: 'static + Send + From<diesel::result::Error>,
+    F: 'static + Send + FnOnce(&mut PgConnection) -> Result<R, E>,
+{
+    diesel::Connection::transaction(conn, f)
+}
+
+#[allow(unused)]
+#[cfg(feature = "test")]
+fn read<R, E, F>(conn: &mut PgConnection, f: F) -> Result<R, E>
 where
     R: 'static + Send,
     E: 'static + Send + From<diesel::result::Error>,

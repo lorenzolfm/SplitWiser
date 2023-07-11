@@ -30,10 +30,10 @@ pub(super) async fn create_revenue(
     .await
     {
         Ok(id) => Ok(Id { id: *id }),
-        Err(_e @ UserError::TimeError(_)) => Err(Status::out_of_range(
+        Err(_e @ UserError::Time(_)) => Err(Status::out_of_range(
             "Invalid timestamp for begin_charging_at",
         )),
-        Err(_e @ UserError::DbError(_)) => Err(Status::internal("Database error")),
+        Err(_e @ UserError::Database(_)) => Err(Status::internal("Database error")),
     }
 }
 
@@ -54,10 +54,10 @@ pub(super) async fn create_payment(
     .await
     {
         Ok(id) => Ok(Id { id: *id }),
-        Err(_e @ UserError::TimeError(_)) => Err(Status::out_of_range(
+        Err(_e @ UserError::Time(_)) => Err(Status::out_of_range(
             "Invalid timestamp for begin_charging_at",
         )),
-        Err(_e @ UserError::DbError(_)) => Err(Status::internal("Database error")),
+        Err(_e @ UserError::Database(_)) => Err(Status::internal("Database error")),
     }
 }
 
@@ -87,9 +87,9 @@ pub(super) async fn create_expense(
     .await
     {
         Ok(CreateExpenseOutcome::Created(id)) => Ok(Id { id: *id }),
-        Err(_e @ UserError::TimeError(_)) => Err(Status::out_of_range(
+        Err(_e @ UserError::Time(_)) => Err(Status::out_of_range(
             "Invalid timestamp for begin_charging_at",
         )),
-        Err(_e @ UserError::DbError(_)) => Err(Status::internal("Database error")),
+        Err(_e @ UserError::Database(_)) => Err(Status::internal("Database error")),
     }
 }
