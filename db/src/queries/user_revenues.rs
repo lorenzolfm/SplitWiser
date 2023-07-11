@@ -34,7 +34,7 @@ pub fn delete(conn: &mut PgConnection, id: i32, user_id: i32) -> QueryResult<Use
         .get_result(conn)
 }
 
-pub fn revenue_for_period(
+pub fn find_for_period(
     conn: &mut PgConnection,
     user_id: i32,
     from: OffsetDateTime,
@@ -130,7 +130,7 @@ mod test {
 
             let expected = Some(BigDecimal::from(489));
             let actual =
-                super::revenue_for_period(&mut conn, user_id, from, OffsetDateTime::now_utc())
+                super::find_for_period(&mut conn, user_id, from, OffsetDateTime::now_utc())
                     .unwrap();
 
             assert_eq!(actual, expected);

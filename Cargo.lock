@@ -107,6 +107,7 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -955,6 +956,7 @@ dependencies = [
 name = "splitwiser"
 version = "0.1.0"
 dependencies = [
+ "bigdecimal",
  "db",
  "futures",
  "prost",

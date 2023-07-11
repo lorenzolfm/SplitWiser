@@ -49,9 +49,10 @@ message CreateExpenseRequest {
 }
 
 message GetStatementRequest {
-    repeated int32 user_ids = 1;
-    uint64 from_timestamp = 2;
-    uint64 to_timestamp = 3;
+    int32 payer = 1;
+    int32 payee = 2;
+    uint64 from_timestamp = 3;
+    uint64 to_timestamp = 4;
 }
 
 message GetStatementResponse {

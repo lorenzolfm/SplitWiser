@@ -61,7 +61,8 @@ impl proto::splitwiser_server::Splitwiser for Server {
 
         statement::get(
             &self.db,
-            request.user_ids,
+            request.payer,
+            request.payee,
             request.from_timestamp,
             request.to_timestamp,
         )
