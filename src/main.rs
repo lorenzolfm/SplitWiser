@@ -2,6 +2,13 @@ mod env;
 mod features;
 mod grpc;
 
+// TODO: Rename revenue -> income
+
+struct Deps {
+    db: db::Db,
+    env: crate::env::Env,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let env = env::Env::load();
@@ -12,9 +19,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     grpc::serve(&deps).await?;
 
     Ok(())
-}
-
-struct Deps {
-    db: db::Db,
-    env: crate::env::Env,
 }

@@ -17,6 +17,13 @@ pub fn build(database_url: &str) -> Result<Db, r2d2::Error> {
 }
 
 impl Db {
+    #[cfg(feature = "test")]
+    pub async fn conn(&self) -> Result<PooledConn, r2d2::Error> {
+        let pool = self.0.clone();
+        let res = tokio::task::spawn_blocking(move || pool.get());
+        res.await.unwrap()
+    }
+
     pub async fn read<R, E, F>(&self, f: F) -> Result<R, E>
     where
         R: 'static + Send,

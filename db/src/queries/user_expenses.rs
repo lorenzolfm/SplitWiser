@@ -74,8 +74,8 @@ pub fn find_for_period(
         .inner_join(user_expense_installments::table)
         .filter(user_expenses::chargee_user_id.eq(chargee))
         .filter(user_expenses::charged_user_id.eq(charged))
-        .filter(user_expense_installments::charged_at.gt(from))
-        .filter(user_expense_installments::charged_at.le(until))
+        .filter(user_expense_installments::charged_at.ge(from)) // TODO: Add test to catch this bug
+        .filter(user_expense_installments::charged_at.lt(until))
         .select((
             user_expense_installments::amount_cents,
             user_expenses::charge_method,
