@@ -1,6 +1,6 @@
 use bigdecimal::BigDecimal;
 use diesel::{ExpressionMethods, PgConnection, QueryDsl, QueryResult, RunQueryDsl};
-use schema::schema::user_revenues;
+use schema::schema::user_incomes;
 use time::OffsetDateTime;
 
 use crate::types::UserRevenueId;
@@ -14,23 +14,23 @@ pub struct CreateParams<'a> {
 }
 
 pub fn create(conn: &mut PgConnection, p: &CreateParams) -> QueryResult<UserRevenueId> {
-    diesel::insert_into(user_revenues::table)
+    diesel::insert_into(user_incomes::table)
         .values((
-            user_revenues::user_id.eq(p.user_id),
-            user_revenues::amount_cents.eq(p.amount_cents),
-            user_revenues::incoming_at.eq(p.incoming_at),
-            user_revenues::description.eq(p.description),
-            user_revenues::created_at.eq(p.created_at),
+            user_incomes::user_id.eq(p.user_id),
+            user_incomes::amount_cents.eq(p.amount_cents),
+            user_incomes::incoming_at.eq(p.incoming_at),
+            user_incomes::description.eq(p.description),
+            user_incomes::created_at.eq(p.created_at),
         ))
-        .returning(user_revenues::id)
+        .returning(user_incomes::id)
         .get_result(conn)
 }
 
 pub fn delete(conn: &mut PgConnection, id: i32, user_id: i32) -> QueryResult<UserRevenueId> {
-    diesel::delete(user_revenues::table)
-        .filter(user_revenues::id.eq(id))
-        .filter(user_revenues::user_id.eq(user_id))
-        .returning(user_revenues::id)
+    diesel::delete(user_incomes::table)
+        .filter(user_incomes::id.eq(id))
+        .filter(user_incomes::user_id.eq(user_id))
+        .returning(user_incomes::id)
         .get_result(conn)
 }
 
@@ -40,11 +40,11 @@ pub fn find_for_period(
     from: OffsetDateTime,
     until: OffsetDateTime,
 ) -> QueryResult<Option<BigDecimal>> {
-    user_revenues::table
-        .filter(user_revenues::user_id.eq(user_id))
-        .filter(user_revenues::incoming_at.ge(from)) // TODO: Add test to catch this bug
-        .filter(user_revenues::incoming_at.lt(until))
-        .select(diesel::dsl::sum(user_revenues::amount_cents))
+    user_incomes::table
+        .filter(user_incomes::user_id.eq(user_id))
+        .filter(user_incomes::incoming_at.ge(from)) // TODO: Add test to catch this bug
+        .filter(user_incomes::incoming_at.lt(until))
+        .select(diesel::dsl::sum(user_incomes::amount_cents))
         .get_result(conn)
 }
 

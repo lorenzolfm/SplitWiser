@@ -1,6 +1,6 @@
 use db::{
     enums::UserExpensesChargeMethod,
-    queries::{user_expenses, user_payments, user_revenues},
+    queries::{user_expenses, user_incomes, user_payments},
     types::{UserExpenseId, UserId, UserPaymentId, UserRevenueId},
 };
 use time::OffsetDateTime;
@@ -41,9 +41,9 @@ pub async fn create_revenue(
 
     Ok(db
         .write(move |conn| {
-            user_revenues::create(
+            user_incomes::create(
                 conn,
-                &user_revenues::CreateParams {
+                &user_incomes::CreateParams {
                     user_id,
                     amount_cents,
                     description: description.as_deref(),

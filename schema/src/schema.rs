@@ -33,6 +33,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    user_incomes (id) {
+        id -> Int4,
+        user_id -> Int4,
+        amount_cents -> Int8,
+        incoming_at -> Timestamptz,
+        description -> Nullable<Text>,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     user_payments (id) {
         id -> Int4,
         created_by -> Int4,
@@ -40,17 +51,6 @@ diesel::table! {
         payee_user_id -> Int4,
         payer_user_id -> Int4,
         payed_at -> Timestamptz,
-        created_at -> Timestamptz,
-    }
-}
-
-diesel::table! {
-    user_revenues (id) {
-        id -> Int4,
-        user_id -> Int4,
-        amount_cents -> Int8,
-        incoming_at -> Timestamptz,
-        description -> Nullable<Text>,
         created_at -> Timestamptz,
     }
 }
@@ -64,12 +64,12 @@ diesel::table! {
 }
 
 diesel::joinable!(user_expense_installments -> user_expenses (user_expense_id));
-diesel::joinable!(user_revenues -> users (user_id));
+diesel::joinable!(user_incomes -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     user_expense_installments,
     user_expenses,
+    user_incomes,
     user_payments,
-    user_revenues,
     users,
 );

@@ -34,13 +34,13 @@ pub async fn get(
             dbg!(total_expenses);
 
             let Some(payer_revenue) =
-            db::queries::user_revenues::find_for_period(conn, payer, from, to)?.unwrap_or_default()
+            db::queries::user_incomes::find_for_period(conn, payer, from, to)?.unwrap_or_default()
                 .to_i64() else {
                     return Err(GetError::BigDecimalToI64);
                 };
 
             let Some(payee_revenue) =
-            db::queries::user_revenues::find_for_period(conn, payee, from, to)?
+            db::queries::user_incomes::find_for_period(conn, payee, from, to)?
                 .unwrap_or_default()
                 .to_i64() else {
                     return Err(GetError::BigDecimalToI64);
@@ -78,14 +78,6 @@ pub async fn get(
 }
 
 mod test {
-    macro_rules! assert_delta {
-        ($x:expr, $y:expr, $d:expr) => {
-            if !($x - $y < $d || $y - $x < $d) {
-                panic!();
-            }
-        };
-    }
-
     #[tokio::test]
     async fn test_get() {
         const ONE_BRL_IN_CENTS: f64 = 100_f64;
@@ -98,9 +90,9 @@ mod test {
         let user_1 = db::queries::users::create(&mut db.conn().await.unwrap(), now).unwrap();
         let user_2 = db::queries::users::create(&mut db.conn().await.unwrap(), now).unwrap();
 
-        db::queries::user_revenues::create(
+        db::queries::user_incomes::create(
             &mut db.conn().await.unwrap(),
-            &db::queries::user_revenues::CreateParams {
+            &db::queries::user_incomes::CreateParams {
                 user_id: *user_1,
                 amount_cents: (6049.17 * ONE_BRL_IN_CENTS) as i64,
                 description: None,
@@ -110,9 +102,9 @@ mod test {
         )
         .unwrap();
 
-        db::queries::user_revenues::create(
+        db::queries::user_incomes::create(
             &mut db.conn().await.unwrap(),
-            &db::queries::user_revenues::CreateParams {
+            &db::queries::user_incomes::CreateParams {
                 user_id: *user_1,
                 amount_cents: (1100_f64 * ONE_BRL_IN_CENTS) as i64,
                 description: None,
@@ -122,9 +114,9 @@ mod test {
         )
         .unwrap();
 
-        db::queries::user_revenues::create(
+        db::queries::user_incomes::create(
             &mut db.conn().await.unwrap(),
-            &db::queries::user_revenues::CreateParams {
+            &db::queries::user_incomes::CreateParams {
                 user_id: *user_1,
                 amount_cents: (5182.86 * ONE_BRL_IN_CENTS) as i64,
                 description: None,
@@ -150,9 +142,9 @@ mod test {
         )
         .unwrap();
 
-        db::queries::user_revenues::create(
+        db::queries::user_incomes::create(
             &mut db.conn().await.unwrap(),
-            &db::queries::user_revenues::CreateParams {
+            &db::queries::user_incomes::CreateParams {
                 user_id: *user_2,
                 amount_cents: (6049.17 * ONE_BRL_IN_CENTS) as i64,
                 description: None,
@@ -162,9 +154,9 @@ mod test {
         )
         .unwrap();
 
-        db::queries::user_revenues::create(
+        db::queries::user_incomes::create(
             &mut db.conn().await.unwrap(),
-            &db::queries::user_revenues::CreateParams {
+            &db::queries::user_incomes::CreateParams {
                 user_id: *user_2,
                 amount_cents: (5500_f64 * ONE_BRL_IN_CENTS) as i64,
                 description: None,
@@ -174,9 +166,9 @@ mod test {
         )
         .unwrap();
 
-        db::queries::user_revenues::create(
+        db::queries::user_incomes::create(
             &mut db.conn().await.unwrap(),
-            &db::queries::user_revenues::CreateParams {
+            &db::queries::user_incomes::CreateParams {
                 user_id: *user_2,
                 amount_cents: (1100_f64 * ONE_BRL_IN_CENTS) as i64,
                 description: None,
@@ -186,9 +178,9 @@ mod test {
         )
         .unwrap();
 
-        db::queries::user_revenues::create(
+        db::queries::user_incomes::create(
             &mut db.conn().await.unwrap(),
-            &db::queries::user_revenues::CreateParams {
+            &db::queries::user_incomes::CreateParams {
                 user_id: *user_2,
                 amount_cents: (200_f64 * ONE_BRL_IN_CENTS) as i64,
                 description: None,

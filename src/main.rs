@@ -2,8 +2,6 @@ mod env;
 mod features;
 mod grpc;
 
-// TODO: Rename revenue -> income
-
 struct Deps {
     db: db::Db,
     env: crate::env::Env,
