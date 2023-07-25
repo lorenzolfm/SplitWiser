@@ -2,6 +2,7 @@ use crate::{
     enums::UserExpensesChargeMethod,
     schema::{user_expense_installments, user_expenses},
 };
+use bigdecimal::BigDecimal;
 use diesel::{ExpressionMethods, PgConnection, QueryDsl, QueryResult, Queryable, RunQueryDsl};
 use time::{Duration, OffsetDateTime};
 
@@ -63,24 +64,23 @@ pub struct Expense {
     pub charge_method: UserExpensesChargeMethod,
 }
 
-pub fn find_for_period(
+pub fn find_for_period_and_charge_method(
     conn: &mut PgConnection,
     chargee: i32,
     charged: i32,
     from: OffsetDateTime,
     until: OffsetDateTime,
-) -> QueryResult<Vec<Expense>> {
+    charge_method: UserExpensesChargeMethod,
+) -> QueryResult<Option<BigDecimal>> {
     user_expenses::table
         .inner_join(user_expense_installments::table)
         .filter(user_expenses::chargee_user_id.eq(chargee))
         .filter(user_expenses::charged_user_id.eq(charged))
-        .filter(user_expense_installments::charged_at.ge(from)) // TODO: Add test to catch this bug
+        .filter(user_expenses::charge_method.eq(charge_method))
+        .filter(user_expense_installments::charged_at.ge(from))
         .filter(user_expense_installments::charged_at.lt(until))
-        .select((
-            user_expense_installments::amount_cents,
-            user_expenses::charge_method,
-        ))
-        .get_results(conn)
+        .select(diesel::dsl::sum(user_expense_installments::amount_cents))
+        .get_result(conn)
 }
 
 #[cfg(test)]
@@ -273,16 +273,18 @@ mod test {
 
             let from = now;
             let until = now + Duration::weeks(16);
-            let res = super::find_for_period(&mut conn, u0, u1, from, until).unwrap();
+            let expenses = super::find_for_period_and_charge_method(
+                &mut conn,
+                u0,
+                u1,
+                from,
+                until,
+                charge_method,
+            )
+            .unwrap()
+            .unwrap();
 
-            assert_eq!(res.len(), 5);
-            for expense in res {
-                assert_eq!(expense.amount_cents, amount_cents);
-                assert!(matches!(
-                    expense.charge_method,
-                    super::UserExpensesChargeMethod::Even
-                ));
-            }
+            assert_eq!(expenses, bigdecimal::BigDecimal::from(amount_cents * 5));
         }
     }
 }

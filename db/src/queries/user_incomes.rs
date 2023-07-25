@@ -42,7 +42,7 @@ pub fn find_for_period(
 ) -> QueryResult<Option<BigDecimal>> {
     user_incomes::table
         .filter(user_incomes::user_id.eq(user_id))
-        .filter(user_incomes::incoming_at.ge(from)) // TODO: Add test to catch this bug
+        .filter(user_incomes::incoming_at.ge(from))
         .filter(user_incomes::incoming_at.lt(until))
         .select(diesel::dsl::sum(user_incomes::amount_cents))
         .get_result(conn)
@@ -110,7 +110,7 @@ mod test {
                     user_id,
                     amount_cents: 69,
                     description: None,
-                    incoming_at,
+                    incoming_at: from,
                     created_at: OffsetDateTime::now_utc(),
                 },
             )

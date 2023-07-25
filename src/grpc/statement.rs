@@ -13,7 +13,13 @@ pub(super) async fn get(
     to_timestamp: u64,
 ) -> Result<GetStatementResponse, Status> {
     match statement::get(&db, payer, payee, from_timestamp, to_timestamp).await {
-        Ok(_) => Ok(GetStatementResponse { bills: Vec::new() }),
+        Ok(_) => Ok(GetStatementResponse {
+            income: 0,
+            share: String::from("10"),
+            pays: 0,
+            paid: 0,
+            owes: 0,
+        }),
         Err(_) => Err(Status::unimplemented("treat it")),
     }
 }

@@ -1,9 +1,21 @@
 use bigdecimal::ToPrimitive;
-use db::Db;
+use db::{
+    enums::UserExpensesChargeMethod,
+    queries::{user_expenses, user_incomes},
+    Db,
+};
 use time::OffsetDateTime;
 
+pub struct Statement {
+    pub income: i64,
+    pub pays: i64,
+    pub paid: i64,
+    pub owes: i64,
+    pub share: String,
+}
+
 #[derive(Debug, thiserror::Error)]
-pub enum GetError {
+pub enum StatementError {
     #[error("Database error: {0:?}")]
     Database(#[from] db::Error),
     #[error("Time conversion error: {0:?}")]
@@ -18,63 +30,54 @@ pub async fn get(
     payee: i32,
     from_timestamp: u64,
     to_timestamp: u64,
-) -> Result<i64, GetError> {
+) -> Result<Statement, StatementError> {
     let from = OffsetDateTime::from_unix_timestamp(from_timestamp as i64)?;
-    let to = OffsetDateTime::from_unix_timestamp(to_timestamp as i64)?;
+    let until = OffsetDateTime::from_unix_timestamp(to_timestamp as i64)?;
 
-    let total = db
-        .read(move |conn| {
-            let payer_expense =
-                db::queries::user_expenses::find_for_period(conn, payer, payee, from, to)?;
-            let payee_expense =
-                db::queries::user_expenses::find_for_period(conn, payee, payer, from, to)?;
-            let total_expenses: i64 = payer_expense.iter().fold(0, |acc, e| acc + e.amount_cents)
-                + payee_expense.iter().fold(0, |acc, e| acc + e.amount_cents);
+    db.read(move |conn| {
+        let Some(payer_income) = user_incomes::find_for_period(conn, payer, from, until)?.unwrap_or_default().to_i64() else {
+            return Err(StatementError::BigDecimalToI64);
+        };
+        let Some(payee_income) = user_incomes::find_for_period(conn, payee, from, until)?.unwrap_or_default().to_i64() else {
+            return Err(StatementError::BigDecimalToI64);
+        };
 
-            dbg!(total_expenses);
+        let total_income = dbg!(payer_income + payee_income);
 
-            let Some(payer_revenue) =
-            db::queries::user_incomes::find_for_period(conn, payer, from, to)?.unwrap_or_default()
-                .to_i64() else {
-                    return Err(GetError::BigDecimalToI64);
-                };
+        let Some(paid) = user_expenses::find_for_period_and_charge_method(
+            conn,
+            payer,
+            payee,
+            from,
+            until,
+            UserExpensesChargeMethod::Proportional,
+        )?.unwrap_or_default().to_i64() else {
+            return Err(StatementError::BigDecimalToI64);
+        };
+        let Some(payee_expenses) = user_expenses::find_for_period_and_charge_method(
+            conn,
+            payee,
+            payer,
+            from,
+            until,
+            UserExpensesChargeMethod::Proportional,
+        )?.unwrap_or_default().to_i64() else {
+            return Err(StatementError::BigDecimalToI64);
+        };
 
-            let Some(payee_revenue) =
-            db::queries::user_incomes::find_for_period(conn, payee, from, to)?
-                .unwrap_or_default()
-                .to_i64() else {
-                    return Err(GetError::BigDecimalToI64);
-                };
+        let total_expenses = dbg!(paid + payee_expenses);
+        let payer_share = dbg!(payer_income as f64 / total_income as f64);
+        let pays = dbg!((total_expenses as f64 * payer_share) as i64);
 
-            let total_revenue = dbg!(payer_revenue + payee_revenue);
-            let payer_share = dbg!(payer_revenue as f64 / total_revenue as f64);
-            let pays = total_expenses as f64 * payer_share;
-
-            dbg!(pays as i64);
-
-            let (mut proportional_for_payer, mut even_for_payer, mut full_for_payer) = (0, 0, 0);
-
-            for e in &payer_expense {
-                match e.charge_method {
-                    db::enums::UserExpensesChargeMethod::Proportional => {
-                        proportional_for_payer += e.amount_cents
-                    }
-                    db::enums::UserExpensesChargeMethod::Even => even_for_payer += e.amount_cents,
-                    db::enums::UserExpensesChargeMethod::Full => full_for_payer += e.amount_cents,
-                }
-            }
-
-            dbg!(payer_revenue, payer_share, proportional_for_payer);
-
-            let total = full_for_payer as f64
-                + (even_for_payer as f64 / 2_f64)
-                + (proportional_for_payer as f64);
-
-            Ok(pays as i64 - total as i64)
+        Ok(Statement {
+             income: payer_income,
+             pays,
+             paid,
+             owes: pays - paid,
+             share: format!("{:.2}", (payer_share * 100.0)),
         })
-        .await?;
-
-    Ok(total)
+    })
+    .await
 }
 
 mod test {
@@ -424,6 +427,10 @@ mod test {
         .await
         .unwrap();
 
-        assert_eq!(res, (741.82 * ONE_BRL_IN_CENTS) as i64);
+        assert_eq!(res.income, (12332.02 * ONE_BRL_IN_CENTS) as i64);
+        assert_eq!(res.paid, (150.0 * ONE_BRL_IN_CENTS) as i64);
+        assert_eq!(res.pays, (891.82 * ONE_BRL_IN_CENTS) as i64);
+        assert_eq!(res.share, String::from("48.97"));
+        assert_eq!(res.owes, (741.82 * ONE_BRL_IN_CENTS) as i64);
     }
 }
